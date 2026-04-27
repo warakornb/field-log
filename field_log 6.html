@@ -175,7 +175,17 @@
   }
 
   /* Detail view */
-  .detail-photo { width: 100%; border-radius: 8px; margin-bottom: 1rem; display: block; }
+  .detail-photo { width: 100%; border-radius: 8px; margin-bottom: 1rem; display: block; cursor: zoom-in; }
+  .detail-photo-wrap { position: relative; }
+  .detail-photo-dl {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.7); color: white;
+    border: none; border-radius: 50%;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer;
+  }
+  .detail-photo-dl:active { background: rgba(0,0,0,0.9); }
   .detail-title {
     font-family: Georgia, serif; font-size: 1.5rem; margin: 0 0 0.25rem;
   }
@@ -1250,6 +1260,75 @@ function triggerDownload(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function dataUrlToBlob(dataUrl) {
+  // Convert "data:image/jpeg;base64,..." to a Blob
+  const [meta, data] = dataUrl.split(',');
+  const mime = (meta.match(/data:(.*?);/) || [])[1] || 'image/jpeg';
+  const bin = atob(data);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+function safeFilename(s) {
+  return String(s || '').replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
+}
+
+function downloadPhoto(entryId, kind) {
+  // kind: 'visit' | 'odoStart' | 'odoEnd' | pinId
+  const entry = state.entries.find(e => e.id === entryId) ||
+    (state.active && state.active.id === entryId ? state.active : null);
+  if (!entry) return;
+  let dataUrl, label;
+  if (kind === 'visit') {
+    dataUrl = entry.photo;
+    label = 'visit';
+  } else if (kind === 'odoStart') {
+    dataUrl = entry.odoStartPhoto || entry.odoPhoto;
+    label = 'odo_start';
+  } else if (kind === 'odoEnd') {
+    dataUrl = entry.odoEndPhoto;
+    label = 'odo_end';
+  } else {
+    // pin photo: kind is the pin id
+    const pin = (entry.pins || []).find(p => p.id === kind);
+    if (pin) {
+      dataUrl = pin.photo;
+      const idx = (entry.pins || []).findIndex(p => p.id === kind) + 1;
+      label = 'pin' + idx;
+    }
+  }
+  if (!dataUrl) {
+    alert('No photo to download.');
+    return;
+  }
+  const blob = dataUrlToBlob(dataUrl);
+  const date = (entry.date || '').replace(/-/g, '');
+  const customer = safeFilename(entry.customer);
+  const filename = `${date}_${customer}_${label}.jpg`;
+  triggerDownload(blob, filename);
+}
+
+function downloadAllPhotosForEntry(entryId) {
+  const entry = state.entries.find(e => e.id === entryId) ||
+    (state.active && state.active.id === entryId ? state.active : null);
+  if (!entry) return;
+  // Collect all photos with their kind
+  const tasks = [];
+  if (entry.photo) tasks.push('visit');
+  if (entry.odoStartPhoto || entry.odoPhoto) tasks.push('odoStart');
+  if (entry.odoEndPhoto) tasks.push('odoEnd');
+  (entry.pins || []).forEach(p => { if (p.photo) tasks.push(p.id); });
+  if (tasks.length === 0) {
+    alert('No photos in this entry.');
+    return;
+  }
+  // Trigger downloads sequentially with small delay to avoid browser blocking
+  tasks.forEach((kind, i) => {
+    setTimeout(() => downloadPhoto(entryId, kind), i * 250);
+  });
+}
+
 //=============================================================
 // Render
 //=============================================================
@@ -1958,16 +2037,27 @@ function renderDetail() {
   if (!e) return '';
   const conveyance = (parseFloat(e.km) || 0) * 7.5;
 
+  // Count photos in this entry
+  const photoCount = (e.photo ? 1 : 0)
+    + ((e.odoStartPhoto || e.odoPhoto) ? 1 : 0)
+    + (e.odoEndPhoto ? 1 : 0)
+    + (e.pins || []).filter(p => p.photo).length;
+
   return `
     <div class="toolbar">
       <button class="btn-link" onclick="goList()">✕ Back</button>
-      <div style="display:flex;gap:0.5rem;">
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        ${photoCount > 0 ? `<button class="btn-secondary" onclick="downloadAllPhotosForEntry('${e.id}')" title="Download all photos">⬇ ${photoCount} photo${photoCount > 1 ? 's' : ''}</button>` : ''}
         <button class="btn-secondary" onclick="editActive()">✎ Edit</button>
         <button class="btn-secondary" style="color:#a02a2a;border-color:#e8c9c9;" onclick="deleteEntry('${e.id}')">🗑</button>
       </div>
     </div>
 
-    ${e.photo ? `<img class="detail-photo" src="${e.photo}" alt="">` : ''}
+    ${e.photo ? `
+      <div class="detail-photo-wrap">
+        <img class="detail-photo" src="${e.photo}" alt="" onclick="zoomImage('${escapeAttr(e.photo)}')">
+        <button class="detail-photo-dl" onclick="downloadPhoto('${e.id}','visit')" title="Download">⬇</button>
+      </div>` : ''}
 
     <h1 class="detail-title">${escapeHtml(e.customer)}</h1>
     <div class="detail-date">📅 ${escapeHtml(formatDateLong(e.date))}</div>
@@ -1993,16 +2083,18 @@ function renderDetail() {
       ${(e.odoStartPhoto || e.odoEndPhoto || e.odoPhoto) ? `
         <div class="odo-pair" style="margin-top:0.75rem;">
           ${(e.odoStartPhoto || e.odoPhoto) ? `
-            <div class="odo-slot" style="cursor:zoom-in;" onclick="zoomImage('${escapeAttr(e.odoStartPhoto || e.odoPhoto)}')">
+            <div class="odo-slot">
               <div class="odo-slot-label">START</div>
-              <img src="${e.odoStartPhoto || e.odoPhoto}" alt="start" class="odo-slot-img">
+              <img src="${e.odoStartPhoto || e.odoPhoto}" alt="start" class="odo-slot-img" onclick="zoomImage('${escapeAttr(e.odoStartPhoto || e.odoPhoto)}')" style="cursor:zoom-in;">
               <div class="odo-slot-value">${escapeHtml(e.odometerStart || '—')}</div>
+              <button class="btn-tiny" style="width:100%;margin-top:0.25rem;" onclick="downloadPhoto('${e.id}','odoStart')">⬇ Download</button>
             </div>` : '<div></div>'}
           ${e.odoEndPhoto ? `
-            <div class="odo-slot" style="cursor:zoom-in;" onclick="zoomImage('${escapeAttr(e.odoEndPhoto)}')">
+            <div class="odo-slot">
               <div class="odo-slot-label">END</div>
-              <img src="${e.odoEndPhoto}" alt="end" class="odo-slot-img">
+              <img src="${e.odoEndPhoto}" alt="end" class="odo-slot-img" onclick="zoomImage('${escapeAttr(e.odoEndPhoto)}')" style="cursor:zoom-in;">
               <div class="odo-slot-value">${escapeHtml(e.odometerEnd || '—')}</div>
+              <button class="btn-tiny" style="width:100%;margin-top:0.25rem;" onclick="downloadPhoto('${e.id}','odoEnd')">⬇ Download</button>
             </div>` : '<div></div>'}
         </div>` : ''}
     </div>
@@ -2019,7 +2111,8 @@ function renderDetail() {
                 <div class="pin-time">${formatTime(p.timestamp)} · ±${Math.round(p.accuracy)}m</div>
               </div>
               ${p.photo
-                ? `<img src="${p.photo}" class="pin-photo" onclick="zoomImage('${escapeAttr(p.photo)}')" alt="">`
+                ? `<img src="${p.photo}" class="pin-photo" onclick="zoomImage('${escapeAttr(p.photo)}')" alt="">
+                   <button class="pin-photo-add" onclick="downloadPhoto('${e.id}','${p.id}')" title="Download photo">⬇</button>`
                 : ''}
               <a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank" rel="noopener" class="pin-map">🗺️</a>
             </div>
