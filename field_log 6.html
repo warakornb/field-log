@@ -1,0 +1,2229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Field Log">
+<meta name="theme-color" content="#1a1a1a">
+<title>Field Log — Check-in & Expense</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #f5f1ea;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding-bottom: 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: #1a1a1a;
+    color: #f5f1ea;
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 3px solid #c2410c;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .brand {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em;
+  }
+  .tagline {
+    font-size: 0.7rem; opacity: 0.6; letter-spacing: 0.15em;
+    text-transform: uppercase; margin-top: 2px;
+  }
+  main { padding: 1rem 1.25rem; max-width: 600px; margin: 0 auto; }
+
+  /* Buttons */
+  button { font-family: inherit; cursor: pointer; }
+  .btn-primary {
+    background: #c2410c; color: #f5f1ea; border: none;
+    padding: 0.75rem 1rem; border-radius: 6px;
+    font-size: 0.95rem; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  }
+  .btn-primary:disabled { opacity: 0.5; }
+  .btn-secondary {
+    background: #fdfaf3; color: #1a1a1a; border: 1px solid #d4c5a9;
+    padding: 0.6rem 0.85rem; border-radius: 6px;
+    font-size: 0.85rem; font-weight: 500;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+  }
+  .btn-ghost {
+    background: transparent; border: 1px solid #f5f1ea; color: #f5f1ea;
+    padding: 0.4rem 0.75rem; border-radius: 4px; font-size: 0.8rem;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+  }
+  .btn-link {
+    background: none; border: none; color: #5a4a3a;
+    padding: 0.25rem 0; display: inline-flex; align-items: center; gap: 0.25rem;
+  }
+  .icon-btn {
+    background: none; border: none; padding: 0.25rem;
+    display: inline-flex; align-items: center;
+  }
+
+  /* FAB */
+  .fab {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #c2410c; color: #f5f1ea; border: none;
+    box-shadow: 0 4px 12px rgba(194, 65, 12, 0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50; font-size: 28px; font-weight: 300;
+  }
+
+  /* Sections */
+  .section { margin-bottom: 1.25rem; }
+  .section-title {
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #8a7a6a;
+    margin-bottom: 0.5rem; padding-left: 0.25rem;
+  }
+  .field { display: block; margin-bottom: 0.5rem; }
+  .field-label {
+    display: block; font-size: 0.75rem; color: #5a4a3a;
+    margin-bottom: 0.2rem; padding-left: 0.1rem;
+  }
+  input, textarea {
+    width: 100%; padding: 0.6rem 0.75rem; font-size: 0.95rem;
+    border: 1px solid #d4c5a9; border-radius: 6px;
+    background: #fdfaf3; color: #1a1a1a;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus {
+    outline: none; border-color: #c2410c;
+  }
+  textarea { resize: vertical; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+
+  /* List */
+  .month-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 0.5rem; padding: 0 0.25rem;
+  }
+  .month-title {
+    font-family: Georgia, serif; font-size: 1.1rem; font-weight: 600;
+    margin: 0;
+  }
+  .month-meta { font-size: 0.85rem; color: #5a4a3a; }
+  .entry-card {
+    background: #fdfaf3; border: 1px solid #e8dfcd; border-radius: 8px;
+    padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.85rem;
+    text-align: left; width: 100%; font-family: inherit; margin-bottom: 0.5rem;
+  }
+  .entry-thumb {
+    width: 48px; height: 48px; border-radius: 6px; flex-shrink: 0;
+    object-fit: cover; background: #e8dfcd;
+    display: flex; align-items: center; justify-content: center;
+    color: #8a7a6a;
+  }
+  .entry-body { flex: 1; min-width: 0; }
+  .entry-name {
+    font-weight: 600; font-size: 0.95rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .entry-sub {
+    font-size: 0.8rem; color: #5a4a3a;
+    display: flex; gap: 0.75rem; margin-top: 2px;
+    align-items: center;
+  }
+  .entry-total { text-align: right; flex-shrink: 0; }
+  .entry-total-amt { font-weight: 600; font-size: 0.9rem; }
+
+  /* Photo capture */
+  .photo-drop {
+    width: 100%; padding: 1.5rem; border: 2px dashed #d4c5a9;
+    border-radius: 8px; background: #fdfaf3;
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    color: #5a4a3a; font-size: 0.9rem;
+  }
+  .photo-preview { position: relative; }
+  .photo-preview img { width: 100%; border-radius: 8px; display: block; }
+  .photo-remove {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(26,26,26,0.7); color: white; border: none;
+    border-radius: 50%; width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Location card */
+  .loc-card {
+    background: #fdfaf3; border: 1px solid #e8dfcd; border-radius: 8px;
+    padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.85rem;
+  }
+  .loc-body { flex: 1; font-size: 0.85rem; }
+  .loc-coords { font-weight: 600; }
+  .loc-meta { color: #5a4a3a; font-size: 0.8rem; }
+
+  /* Total bar */
+  .total-bar {
+    margin-top: 0.85rem; padding: 0.75rem 1rem;
+    background: #1a1a1a; color: #f5f1ea;
+    border-radius: 8px; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .total-label {
+    font-size: 0.75rem; letter-spacing: 0.1em;
+    text-transform: uppercase; opacity: 0.7;
+  }
+  .total-amt {
+    font-family: Georgia, serif; font-size: 1.4rem; font-weight: 600;
+  }
+
+  /* Detail view */
+  .detail-photo { width: 100%; border-radius: 8px; margin-bottom: 1rem; display: block; }
+  .detail-title {
+    font-family: Georgia, serif; font-size: 1.5rem; margin: 0 0 0.25rem;
+  }
+  .detail-date {
+    color: #5a4a3a; margin-bottom: 1.25rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .big-amount {
+    font-family: Georgia, serif; font-size: 2rem; font-weight: 600; color: #c2410c;
+  }
+  .kv {
+    display: flex; justify-content: space-between;
+    padding: 0.35rem 0; border-bottom: 1px dashed #e8dfcd;
+    font-size: 0.9rem;
+  }
+  .kv-label { color: #5a4a3a; }
+
+  /* Empty state */
+  .empty {
+    text-align: center; padding: 4rem 1rem; color: #5a4a3a;
+  }
+  .empty-icon {
+    width: 64px; height: 64px; border-radius: 50%; background: #e8dfcd;
+    margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center;
+    color: #8a7a6a;
+  }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(26,26,26,0.5);
+    display: flex; align-items: flex-end; justify-content: center; z-index: 100;
+  }
+  .modal {
+    background: #f5f1ea; width: 100%; max-width: 500px;
+    border-radius: 12px 12px 0 0; padding: 1.5rem;
+    max-height: 80vh; overflow: auto;
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1rem;
+  }
+  .modal-title {
+    font-family: Georgia, serif; font-size: 1.25rem; margin: 0;
+  }
+  .month-export {
+    border: 1px solid #d4c5a9; border-radius: 6px;
+    padding: 0.75rem 1rem; margin-bottom: 0.75rem; background: #fdfaf3;
+  }
+  .month-export-title { font-weight: 600; margin-bottom: 0.5rem; }
+  .month-export-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .center { text-align: center; }
+  .hidden { display: none !important; }
+
+  .pin { color: #c2410c; }
+  .danger { color: #a02a2a; }
+
+  a.maps-link {
+    display: inline-block; margin-top: 0.5rem;
+    color: #c2410c; font-size: 0.85rem;
+  }
+
+  /* Odometer photo pair (in main form) */
+  .odo-pair {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0.5rem; margin-bottom: 0.5rem;
+  }
+  .odo-slot {
+    background: #fdfaf3; border: 1px solid #d4c5a9;
+    border-radius: 8px; padding: 0.5rem;
+    display: flex; flex-direction: column; align-items: stretch;
+    text-align: center; font-family: inherit;
+    min-height: 160px;
+  }
+  .odo-slot-empty {
+    border: 2px dashed #d4c5a9;
+    cursor: pointer;
+    justify-content: center;
+    color: #5a4a3a;
+  }
+  .odo-slot-label {
+    font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.12em; color: #8a7a6a;
+    margin-bottom: 0.4rem;
+  }
+  .odo-slot-icon { font-size: 28px; margin-bottom: 0.25rem; }
+  .odo-slot-hint { font-size: 0.8rem; }
+  .odo-slot-img {
+    width: 100%; height: 110px; object-fit: cover;
+    border-radius: 6px; cursor: pointer;
+    background: #1a1a1a;
+  }
+  .odo-slot-value {
+    font-family: Georgia, serif; font-size: 1rem; font-weight: 600;
+    margin-top: 0.4rem; color: #1a1a1a;
+  }
+  .odo-slot-actions {
+    display: flex; gap: 0.25rem; margin-top: 0.4rem;
+  }
+  .odo-slot-actions button {
+    flex: 1; padding: 0.3rem; font-size: 0.8rem;
+  }
+
+  /* Zoom overlay */
+  .zoom-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 1rem; cursor: zoom-out;
+  }
+  .zoom-bg img {
+    max-width: 100%; max-height: 100%; object-fit: contain;
+    border-radius: 4px;
+  }
+  .zoom-close {
+    position: absolute; top: 1rem; right: 1rem;
+    background: rgba(255,255,255,0.15); color: white;
+    border: none; border-radius: 50%;
+    width: 40px; height: 40px; font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  /* Inline wheels (in main form) */
+  .odo-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .odo-inline-side {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex; flex-direction: column;
+    gap: 0.4rem;
+  }
+  .odo-inline-label {
+    color: #f5f1ea;
+    font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.12em;
+    text-align: center;
+    padding: 0.15rem;
+  }
+  .odo-wheel-value {
+    color: #f5f1ea;
+    text-align: center;
+    font-family: Georgia, serif;
+    font-size: 1.1rem; font-weight: 600;
+    padding: 0.25rem;
+    background: rgba(0,0,0,0.4);
+    border-radius: 4px;
+  }
+  .odo-inline-photo-wrap {
+    position: relative;
+    height: 100px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #2a2a2a;
+  }
+  .odo-inline-photo {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    cursor: zoom-in;
+  }
+  .odo-inline-photo-actions {
+    position: absolute; top: 4px; right: 4px;
+    display: flex; gap: 3px;
+  }
+  .btn-tiny {
+    background: rgba(0,0,0,0.7); color: white;
+    border: none; border-radius: 4px;
+    width: 26px; height: 26px;
+    font-size: 11px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-tiny-danger { color: #ff8080; }
+  .odo-inline-photo-add {
+    background: rgba(255,255,255,0.06);
+    color: #c2410c;
+    border: 1.5px dashed rgba(194,65,12,0.5);
+    border-radius: 6px;
+    padding: 0.5rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  /* Focused odometer entry mode (split-screen with wheels) */
+  .odo-fullscreen {
+    display: flex; flex-direction: column;
+    margin: -1rem -1.25rem;
+    height: calc(100vh - 80px);
+    background: #1a1a1a;
+  }
+  .odo-side-by-side {
+    flex: 1;
+    display: flex;
+    gap: 2px;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .odo-side {
+    flex: 1;
+    display: flex; flex-direction: column;
+    background: #2a2a2a;
+    padding: 0.5rem;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .odo-side-header {
+    color: #f5f1ea; font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.12em; text-align: center;
+    padding: 0.25rem;
+    background: rgba(0,0,0,0.4);
+    border-radius: 4px;
+  }
+  .odo-side-photo {
+    position: relative;
+    background: #1a1a1a;
+    border-radius: 6px;
+    height: 130px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .odo-side-photo img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .odo-side-photo-add {
+    color: #8a7a6a; text-align: center;
+    font-size: 24px; line-height: 1.4;
+  }
+  .odo-side-photo-retake {
+    position: absolute; top: 4px; right: 4px;
+    background: rgba(0,0,0,0.7); color: white;
+    border: none; border-radius: 50%;
+    width: 28px; height: 28px;
+    cursor: pointer; font-size: 14px;
+  }
+  .odo-side-value {
+    color: #f5f1ea; font-size: 0.8rem;
+    text-align: center; padding: 0.3rem;
+    background: rgba(0,0,0,0.4);
+    border-radius: 4px;
+  }
+  .odo-side-value strong {
+    font-family: Georgia, serif;
+    color: #f5f1ea; font-size: 1.05rem;
+  }
+
+  /* Wheel row */
+  .odo-wheel-row {
+    display: flex; gap: 3px;
+    justify-content: center;
+    align-items: stretch;
+    padding: 0.25rem 0;
+  }
+  .odo-wheel {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: stretch;
+    max-width: 60px;
+  }
+  .odo-wheel-comma {
+    color: #f5f1ea;
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    align-self: center;
+    padding: 0 1px;
+    margin-top: 18px;
+  }
+  .odo-wheel-up, .odo-wheel-down {
+    background: rgba(255,255,255,0.08);
+    color: #c2410c;
+    text-align: center;
+    padding: 6px 0;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    user-select: none; -webkit-user-select: none;
+  }
+  .odo-wheel-up:active, .odo-wheel-down:active {
+    background: rgba(194,65,12,0.3);
+  }
+  .odo-wheel-strip {
+    height: 144px;
+    overflow: hidden;
+    position: relative;
+    /* 3D suitcase-lock effect: dark vertical gradient with subtle inner shadow */
+    background: linear-gradient(to bottom,
+      #0e0e0e 0%, #2a2a2a 20%, #3a3a3a 50%, #2a2a2a 80%, #0e0e0e 100%);
+    border-radius: 6px;
+    margin: 4px 0;
+    cursor: ns-resize;
+    touch-action: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,0.6),
+      inset 0 4px 8px rgba(0,0,0,0.6),
+      inset 0 -4px 8px rgba(0,0,0,0.6);
+  }
+  .odo-wheel-strip::before {
+    /* Highlight band (center cell) */
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: 48px; height: 48px;
+    background: rgba(194,65,12,0.18);
+    border-top: 1px solid rgba(194,65,12,0.6);
+    border-bottom: 1px solid rgba(194,65,12,0.6);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .odo-wheel-strip::after {
+    /* Top + bottom fade for cylinder illusion */
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    background:
+      linear-gradient(to bottom,
+        rgba(0,0,0,0.7) 0%,
+        rgba(0,0,0,0) 30%,
+        rgba(0,0,0,0) 70%,
+        rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .odo-wheel-track {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: transform;
+  }
+  .odo-wheel-cell {
+    height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(245,241,234,0.55);
+    font-family: Georgia, serif;
+    font-size: 1.7rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .odo-wheel-cell.selected {
+    color: #ffffff;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(255,255,255,0.4);
+  }
+
+  /* Pin list (multiple GPS pins per visit) */
+  .pin-list {
+    display: flex; flex-direction: column;
+    gap: 0.4rem;
+  }
+  .pin-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: #fdfaf3; border: 1px solid #e8dfcd;
+    border-radius: 8px; padding: 0.5rem 0.6rem;
+  }
+  .pin-num {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #c2410c; color: #f5f1ea;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem;
+  }
+  .pin-body { flex: 1; min-width: 0; }
+  .pin-coords {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.75rem; color: #1a1a1a;
+  }
+  .pin-time {
+    font-size: 0.7rem; color: #8a7a6a;
+  }
+  .pin-label {
+    font-size: 0.85rem; color: #1a1a1a; font-weight: 500;
+  }
+  .pin-photo {
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    object-fit: cover; border-radius: 4px;
+    cursor: zoom-in;
+  }
+  .pin-photo-add, .pin-map, .pin-del {
+    flex-shrink: 0;
+    background: #fdfaf3; border: 1px solid #d4c5a9;
+    border-radius: 4px;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; cursor: pointer;
+    text-decoration: none;
+    color: #1a1a1a;
+  }
+  .pin-photo-add:active, .pin-map:active, .pin-del:active {
+    background: #e8dfcd;
+  }
+  .pin-del { color: #a02a2a; }
+
+  /* Bottom bar */
+  .odo-bottom {
+    background: #f5f1ea;
+    padding: 0.6rem 0.75rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .odo-distance-bar {
+    text-align: center; padding: 0.4rem;
+    font-size: 0.85rem;
+    background: #1a1a1a; color: #f5f1ea;
+    border-radius: 6px;
+  }
+  .odo-distance-bar strong {
+    font-family: Georgia, serif;
+    font-size: 1.05rem;
+    color: #f5f1ea;
+  }
+  .odo-done {
+    width: 100%; padding: 0.85rem;
+    font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <div class="brand">Field Log</div>
+      <div class="tagline">Check-in & Expense</div>
+    </div>
+    <button id="exportBtn" class="btn-ghost hidden">⬇ Export</button>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<button id="fab" class="fab hidden" aria-label="Add check-in">+</button>
+
+<input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="odoStartInput" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="odoEndInput" accept="image/*" capture="environment" class="hidden">
+
+<script>
+//=============================================================
+// Storage — IndexedDB with localStorage migration
+//=============================================================
+const DB_NAME = 'fieldlog';
+const DB_VERSION = 1;
+const STORE = 'entries';
+const LEGACY_KEY = 'fieldlog_entries_v1';
+
+let dbPromise = null;
+
+function openDB() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('Your browser does not support IndexedDB'));
+      return;
+    }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        const store = db.createObjectStore(STORE, { keyPath: 'id' });
+        store.createIndex('date', 'date');
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dbPromise;
+}
+
+async function migrateFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(LEGACY_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data) || data.length === 0) {
+      localStorage.removeItem(LEGACY_KEY);
+      return false;
+    }
+    // Save each entry to IndexedDB
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      data.forEach(entry => {
+        if (entry && entry.id) store.put(entry);
+      });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    // Only remove from localStorage AFTER successful migration
+    localStorage.removeItem(LEGACY_KEY);
+    console.log('Migrated', data.length, 'entries from localStorage to IndexedDB');
+    return true;
+  } catch (e) {
+    console.error('Migration failed:', e);
+    return false;
+  }
+}
+
+async function loadEntries() {
+  try {
+    const db = await openDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const store = tx.objectStore(STORE);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const items = req.result || [];
+        items.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        resolve(items);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    console.error('Load failed:', e);
+    return [];
+  }
+}
+
+async function deleteEntryDB(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getStorageEstimate() {
+  if (navigator.storage && navigator.storage.estimate) {
+    try {
+      const est = await navigator.storage.estimate();
+      return {
+        usage: est.usage,
+        quota: est.quota,
+        usageMB: (est.usage / 1024 / 1024).toFixed(1),
+        quotaMB: (est.quota / 1024 / 1024).toFixed(0),
+      };
+    } catch (e) { return null; }
+  }
+  return null;
+}
+
+//=============================================================
+// State
+//=============================================================
+let state = {
+  view: 'list',           // list | add | detail
+  entries: [],            // loaded async on boot
+  loading: true,
+  active: null,
+  editingId: null,
+  form: emptyForm(),
+  photoData: null,
+  odoStartPhoto: null,
+  odoEndPhoto: null,
+  odoMode: false,    // when true, show focused odometer entry view
+  coords: null,
+  gpsStatus: 'idle',
+  exportOpen: false,
+};
+
+function emptyForm() {
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    customer: '',
+    from: 'Bangkhunnon',
+    to: 'Bangkhunnon',
+    odometerStart: '',
+    odometerEnd: '',
+    km: '',
+    allowance: '200',
+    tollway: '',
+    taxi: '',
+    bills: '',
+    notes: '',
+    pins: [],
+  };
+}
+
+//=============================================================
+// Helpers
+//=============================================================
+function calcRowTotal(e) {
+  const allowance = parseFloat(e.allowance) || 0;
+  const bills = parseFloat(e.bills) || 0;
+  const km = parseFloat(e.km) || 0;
+  const tollway = parseFloat(e.tollway) || 0;
+  const taxi = parseFloat(e.taxi) || 0;
+  return allowance + bills + km * 7.5 + tollway + taxi;
+}
+
+function sumField(entries, field) {
+  return entries.reduce((s, e) => s + (parseFloat(e[field]) || 0), 0);
+}
+
+function formatDateThai(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return parseInt(d) + '/' + parseInt(m) + '/' + y;
+}
+
+function formatDateShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function formatDateLong(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function fmtMoney(n) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtMoneyShort(n) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function escapeAttr(s) { return escapeHtml(s); }
+
+function groupByMonth(entries) {
+  const groups = {};
+  for (const e of entries) {
+    const key = (e.date || '').slice(0, 7);
+    if (!key) continue;
+    (groups[key] = groups[key] || []).push(e);
+  }
+  Object.values(groups).forEach(arr => arr.sort((a, b) => a.date.localeCompare(b.date)));
+  const labeled = {};
+  Object.keys(groups).sort().forEach(k => {
+    const [y, m] = k.split('-');
+    const monthName = new Date(parseInt(y), parseInt(m) - 1, 1)
+      .toLocaleString('en-US', { month: 'long' });
+    labeled[monthName + ' ' + y] = { key: k, items: groups[k] };
+  });
+  return labeled;
+}
+
+//=============================================================
+// EXIF GPS extraction (JPEG only)
+//=============================================================
+function extractExifGps(buffer) {
+  try {
+    const view = new DataView(buffer);
+    if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return null;
+
+    let offset = 2;
+    while (offset < view.byteLength - 4) {
+      if (view.getUint8(offset) !== 0xFF) return null;
+      const marker = view.getUint8(offset + 1);
+      const size = view.getUint16(offset + 2);
+
+      if (marker === 0xE1) {
+        // APP1 - check for "Exif\0\0"
+        if (
+          view.getUint8(offset + 4) === 0x45 &&
+          view.getUint8(offset + 5) === 0x78 &&
+          view.getUint8(offset + 6) === 0x69 &&
+          view.getUint8(offset + 7) === 0x66
+        ) {
+          return readTiffForGps(view, offset + 10);
+        }
+      }
+      if (marker === 0xDA) return null;
+      offset += 2 + size;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function readTiffForGps(view, tiffStart) {
+  const byteOrder = view.getUint16(tiffStart);
+  const little = byteOrder === 0x4949;
+  if (!little && byteOrder !== 0x4D4D) return null;
+
+  const u16 = (o) => view.getUint16(o, little);
+  const u32 = (o) => view.getUint32(o, little);
+
+  if (u16(tiffStart + 2) !== 0x002A) return null;
+
+  const ifd0Offset = tiffStart + u32(tiffStart + 4);
+  const numEntries0 = u16(ifd0Offset);
+
+  let gpsIfdOffset = null;
+  for (let i = 0; i < numEntries0; i++) {
+    const entry = ifd0Offset + 2 + i * 12;
+    if (u16(entry) === 0x8825) {
+      gpsIfdOffset = tiffStart + u32(entry + 8);
+      break;
+    }
+  }
+  if (!gpsIfdOffset) return null;
+
+  const numEntriesG = u16(gpsIfdOffset);
+  const gps = {};
+  for (let i = 0; i < numEntriesG; i++) {
+    const entry = gpsIfdOffset + 2 + i * 12;
+    const tag = u16(entry);
+    const valueOffset = entry + 8;
+
+    if (tag === 0x0001 || tag === 0x0003) {
+      gps[tag === 0x0001 ? 'latRef' : 'lngRef'] =
+        String.fromCharCode(view.getUint8(valueOffset));
+    } else if (tag === 0x0002 || tag === 0x0004) {
+      const dataStart = tiffStart + u32(valueOffset);
+      const deg = u32(dataStart) / u32(dataStart + 4);
+      const min = u32(dataStart + 8) / u32(dataStart + 12);
+      const sec = u32(dataStart + 16) / u32(dataStart + 20);
+      const dec = deg + min / 60 + sec / 3600;
+      gps[tag === 0x0002 ? 'lat' : 'lng'] = dec;
+    }
+  }
+
+  if (gps.lat == null || gps.lng == null) return null;
+  let lat = gps.lat, lng = gps.lng;
+  if (gps.latRef === 'S') lat = -lat;
+  if (gps.lngRef === 'W') lng = -lng;
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+//=============================================================
+// Photo + GPS handling
+//=============================================================
+function captureGPS(silent) {
+  if (!navigator.geolocation) {
+    if (!silent) { state.gpsStatus = 'unsupported'; render(); }
+    return;
+  }
+  state.gpsStatus = 'loading'; render();
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      state.coords = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        timestamp: pos.timestamp,
+        source: 'live',
+      };
+      state.gpsStatus = 'ok-live';
+      render();
+    },
+    (err) => {
+      state.gpsStatus = silent ? 'idle' : 'error:' + err.message;
+      render();
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+function handlePhotoFile(file, slot) {
+  if (!file) return;
+  // Default slot is the main visit photo
+  slot = slot || 'photo';
+
+  // Only run EXIF/GPS extraction for the main visit photo
+  if (slot === 'photo') {
+    file.arrayBuffer().then(buf => {
+      const exif = extractExifGps(buf);
+      if (exif) {
+        state.coords = {
+          lat: exif.lat, lng: exif.lng,
+          accuracy: 30, timestamp: Date.now(),
+          source: 'photo',
+        };
+        state.gpsStatus = 'ok-exif';
+        render();
+      } else if (!state.coords) {
+        captureGPS(true);
+      }
+    }).catch(() => {
+      if (!state.coords) captureGPS(true);
+    });
+  }
+  // Compress for storage
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1200;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      if (slot === 'odoStart') {
+        state.odoStartPhoto = dataUrl;
+      } else if (slot === 'odoEnd') {
+        state.odoEndPhoto = dataUrl;
+      } else {
+        state.photoData = dataUrl;
+      }
+      render();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+//=============================================================
+// CRUD
+//=============================================================
+function startAdd() {
+  state.form = emptyForm();
+  // Smart default: carry over the most recent entry's End reading as today's Start
+  const lastEnd = getLastOdometerEnd();
+  if (lastEnd) {
+    state.form.odometerStart = String(lastEnd);
+    state.form.odometerEnd = String(lastEnd);
+  } else {
+    state.form.odometerStart = '8000';
+    state.form.odometerEnd = '8000';
+  }
+  state.photoData = null;
+  state.odoStartPhoto = null;
+  state.odoEndPhoto = null;
+  state.odoMode = false;
+  state.odoActiveField = null;
+  state.coords = null;
+  state.gpsStatus = 'idle';
+  state.editingId = null;
+  state.view = 'add';
+  render();
+}
+
+function getLastOdometerEnd() {
+  // Most recent entry by date with a numeric End reading
+  if (!state.entries || state.entries.length === 0) return null;
+  const sorted = [...state.entries].sort((a, b) =>
+    (b.date || '').localeCompare(a.date || '')
+  );
+  for (const e of sorted) {
+    const v = parseInt(e.odometerEnd, 10);
+    if (!isNaN(v) && v > 0) return v;
+  }
+  return null;
+}
+
+function startEdit(entry) {
+  state.form = {
+    date: entry.date,
+    customer: entry.customer,
+    from: entry.from || 'Bangkhunnon',
+    to: entry.to || 'Bangkhunnon',
+    odometerStart: entry.odometerStart || '',
+    odometerEnd: entry.odometerEnd || '',
+    km: entry.km || '',
+    allowance: entry.allowance || '200',
+    tollway: entry.tollway || '',
+    taxi: entry.taxi || '',
+    bills: entry.bills || '',
+    notes: entry.notes || '',
+    pins: Array.isArray(entry.pins) ? entry.pins.map(p => ({...p})) : [],
+  };
+  // backwards-compat: convert old single coords into the first pin
+  if (state.form.pins.length === 0 && entry.coords) {
+    state.form.pins.push({
+      id: 'p_legacy_' + entry.id,
+      lat: entry.coords.lat,
+      lng: entry.coords.lng,
+      accuracy: entry.coords.accuracy || 30,
+      timestamp: entry.coords.timestamp || entry.createdAt || Date.now(),
+      photo: null,
+      label: '',
+    });
+  }
+  state.photoData = entry.photo || null;
+  // backwards-compat: old entries may have single odoPhoto field
+  state.odoStartPhoto = entry.odoStartPhoto || entry.odoPhoto || null;
+  state.odoEndPhoto = entry.odoEndPhoto || null;
+  state.odoMode = false;
+  state.odoActiveField = null;
+  state.coords = entry.coords || null;
+  state.gpsStatus = 'idle';
+  state.editingId = entry.id;
+  state.view = 'add';
+  render();
+}
+
+async function saveEntry() {
+  if (!state.form.customer.trim()) {
+    alert('Please enter a customer name / description');
+    return;
+  }
+  // Validate End >= Start odometer
+  const sNum = parseInt(state.form.odometerStart, 10);
+  const eNum = parseInt(state.form.odometerEnd, 10);
+  if (!isNaN(sNum) && !isNaN(eNum) && eNum < sNum) {
+    alert(`End odometer (${state.form.odometerEnd}) cannot be less than Start (${state.form.odometerStart}). Please correct it.`);
+    return;
+  }
+  const id = state.editingId ||
+    ('e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+  const existing = state.editingId ?
+    state.entries.find(e => e.id === state.editingId) : null;
+  const entry = {
+    id,
+    ...state.form,
+    photo: state.photoData,
+    odoStartPhoto: state.odoStartPhoto,
+    odoEndPhoto: state.odoEndPhoto,
+    coords: state.coords,
+    createdAt: existing ? existing.createdAt : Date.now(),
+    updatedAt: Date.now(),
+  };
+  try {
+    await putEntry(entry);
+    let next;
+    if (state.editingId) {
+      next = state.entries.map(e => e.id === id ? entry : e);
+    } else {
+      next = [...state.entries, entry];
+    }
+    next.sort((a, b) => a.date.localeCompare(b.date));
+    state.entries = next;
+    state.view = 'list';
+    render();
+  } catch (e) {
+    alert('Could not save: ' + (e.message || 'Unknown error') +
+      '\n\nIf storage is full, try exporting and clearing old entries.');
+  }
+}
+
+async function putEntry(entry) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(entry);
+    tx.oncomplete = () => resolve(entry);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function deleteEntry(id) {
+  if (!confirm('Delete this check-in? This cannot be undone.')) return;
+  try {
+    await deleteEntryDB(id);
+    state.entries = state.entries.filter(e => e.id !== id);
+    if (state.active && state.active.id === id) {
+      state.active = null;
+      state.view = 'list';
+    }
+    render();
+  } catch (e) {
+    alert('Could not delete: ' + e.message);
+  }
+}
+
+//=============================================================
+// Export
+//=============================================================
+function exportCSV(monthKey, items) {
+  const header = ['DATE', 'DESCRIPTION', 'ALLOWANCE', 'BILLS', 'FROM', 'TO',
+    'KM', 'CONVEYANCE', 'TOLLWAY', 'TAXI', 'TOTAL', 'PINS', 'GPS', 'NOTES'];
+  const rows = items.map(e => {
+    const pins = (e.pins && e.pins.length) ? e.pins :
+                 (e.coords ? [e.coords] : []);
+    const gpsStr = pins.length > 0
+      ? pins.map(p => p.lat.toFixed(5) + ',' + p.lng.toFixed(5)).join(' | ')
+      : '';
+    return [
+      formatDateThai(e.date),
+      e.customer,
+      e.allowance || '',
+      e.bills || '',
+      e.from || '',
+      e.to || '',
+      e.km || '',
+      e.km ? (parseFloat(e.km) * 7.5).toFixed(2) : '',
+      e.tollway || '',
+      e.taxi || '',
+      calcRowTotal(e).toFixed(2),
+      pins.length,
+      gpsStr,
+      (e.notes || '').replace(/\n/g, ' '),
+    ];
+  });
+  const totals = ['', 'TOTAL EXPENSES',
+    sumField(items, 'allowance'),
+    sumField(items, 'bills'),
+    '', '',
+    sumField(items, 'km'),
+    (sumField(items, 'km') * 7.5).toFixed(2),
+    sumField(items, 'tollway'),
+    sumField(items, 'taxi'),
+    items.reduce((s, e) => s + calcRowTotal(e), 0).toFixed(2),
+    '', '', ''];
+  const csv = [header, ...rows, totals]
+    .map(r => r.map(c => {
+      const s = String(c);
+      return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(','))
+    .join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  triggerDownload(blob, 'Expense_Report_' + monthKey + '.csv');
+}
+
+function exportPhotos(monthKey, items) {
+  const photoEntries = items.filter(e => e.photo || e.coords);
+  if (photoEntries.length === 0) {
+    alert('No photos or GPS data this month.');
+    return;
+  }
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>Check-ins ' + monthKey + '</title><style>' +
+    'body{font-family:-apple-system,system-ui,sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;color:#1a1a1a;}' +
+    'h1{border-bottom:2px solid #1a1a1a;padding-bottom:.5rem;}' +
+    '.entry{page-break-inside:avoid;margin:2rem 0;padding:1rem;border:1px solid #ccc;border-radius:6px;}' +
+    '.entry h3{margin:0 0 .5rem 0;}' +
+    '.meta{font-size:13px;color:#555;line-height:1.6;}' +
+    '.meta strong{color:#1a1a1a;}' +
+    'img{max-width:100%;height:auto;border-radius:4px;margin-top:.75rem;}' +
+    '.gps-link{color:#c2410c;text-decoration:none;}' +
+    '@media print{.entry{border:1px solid #888;}}' +
+    '</style></head><body>' +
+    '<h1>Check-ins — ' + escapeHtml(monthKey) + '</h1>' +
+    '<p style="color:#666">Generated ' + new Date().toLocaleString() + ' · ' +
+    photoEntries.length + ' entries</p>' +
+    photoEntries.map(e => '<div class="entry">' +
+      '<h3>' + escapeHtml(formatDateThai(e.date)) + ' — ' + escapeHtml(e.customer) + '</h3>' +
+      '<div class="meta">' +
+      (e.km ? '<strong>KM:</strong> ' + escapeHtml(e.km) + ' &nbsp; ' : '') +
+      (e.odometerStart ? '<strong>Odometer:</strong> ' +
+        escapeHtml(e.odometerStart) + ' → ' +
+        escapeHtml(e.odometerEnd || '?') + ' &nbsp; ' : '') +
+      '<br>' +
+      (e.coords ? '<strong>GPS:</strong> <a class="gps-link" href="https://maps.google.com/?q=' +
+        e.coords.lat + ',' + e.coords.lng + '">' +
+        e.coords.lat.toFixed(5) + ', ' + e.coords.lng.toFixed(5) +
+        '</a> (±' + Math.round(e.coords.accuracy) + 'm, ' +
+        (e.coords.source === 'photo' ? 'from photo' : 'live GPS') + ')<br>' : '') +
+      (e.notes ? '<strong>Notes:</strong> ' + escapeHtml(e.notes) : '') +
+      '</div>' +
+      (e.photo ? '<img src="' + e.photo + '" alt="check-in photo">' : '') +
+      '</div>').join('') +
+    '</body></html>';
+  const blob = new Blob([html], { type: 'text/html' });
+  triggerDownload(blob, 'Checkins_' + monthKey + '.html');
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+//=============================================================
+// Render
+//=============================================================
+function render() {
+  const main = document.getElementById('main');
+  const fab = document.getElementById('fab');
+  const exportBtn = document.getElementById('exportBtn');
+
+  if (state.loading) {
+    main.innerHTML = '<div class="empty"><div style="color:#5a4a3a;">Loading…</div></div>';
+    fab.classList.add('hidden');
+    exportBtn.classList.add('hidden');
+    return;
+  }
+
+  if (state.view === 'list') {
+    main.innerHTML = renderList();
+    fab.classList.remove('hidden');
+    exportBtn.classList.toggle('hidden', state.entries.length === 0);
+  } else if (state.view === 'add') {
+    main.innerHTML = renderAdd();
+    fab.classList.add('hidden');
+    exportBtn.classList.add('hidden');
+    bindForm();
+  } else if (state.view === 'detail') {
+    main.innerHTML = renderDetail();
+    fab.classList.add('hidden');
+    exportBtn.classList.add('hidden');
+  }
+
+  if (state.exportOpen) renderExportModal();
+  bindGlobal();
+  window.scrollTo(0, state.scroll || 0);
+}
+
+function renderList() {
+  const groups = groupByMonth(state.entries);
+  const labels = Object.keys(groups).reverse();
+
+  if (labels.length === 0) {
+    return `
+      <div class="empty">
+        <div class="empty-icon">📋</div>
+        <div style="font-family:Georgia,serif;font-size:1.25rem;color:#1a1a1a;margin-bottom:0.5rem;">
+          No check-ins yet
+        </div>
+        <p style="font-size:0.9rem;max-width:280px;margin:0 auto 1.5rem;">
+          Tap the orange + button to log your first customer visit.
+        </p>
+        <button class="btn-primary" onclick="startAdd()">+ First check-in</button>
+      </div>`;
+  }
+
+  return labels.map(label => {
+    const items = groups[label].items;
+    const total = items.reduce((s, e) => s + calcRowTotal(e), 0);
+    return `
+      <section style="margin-bottom:1.5rem;">
+        <div class="month-header">
+          <h2 class="month-title">${escapeHtml(label)}</h2>
+          <div class="month-meta">
+            <span style="opacity:0.6;">${items.length} visits · </span>
+            <strong>฿${fmtMoney(total)}</strong>
+          </div>
+        </div>
+        <div>
+          ${items.map(e => `
+            <button class="entry-card" onclick="openDetail('${e.id}')">
+              ${e.photo
+                ? `<img class="entry-thumb" src="${e.photo}" alt="">`
+                : `<div class="entry-thumb">📷</div>`}
+              <div class="entry-body">
+                <div class="entry-name">${escapeHtml(e.customer)}</div>
+                <div class="entry-sub">
+                  <span>${escapeHtml(formatDateShort(e.date))}</span>
+                  ${e.km ? `<span>${escapeHtml(e.km)} km</span>` : ''}
+                  ${e.coords ? `<span class="pin">📍</span>` : ''}
+                </div>
+              </div>
+              <div class="entry-total">
+                <div class="entry-total-amt">฿${fmtMoneyShort(calcRowTotal(e))}</div>
+                <div style="color:#8a7a6a;font-size:0.85rem;">›</div>
+              </div>
+            </button>
+          `).join('')}
+        </div>
+      </section>`;
+  }).join('');
+}
+
+function renderAdd() {
+  const f = state.form;
+  const conveyance = (parseFloat(f.km) || 0) * 7.5;
+  const total = (parseFloat(f.allowance) || 0) + (parseFloat(f.bills) || 0) +
+    conveyance + (parseFloat(f.tollway) || 0) + (parseFloat(f.taxi) || 0);
+
+  const customerOptions = getCustomerSuggestions();
+  const fromOptions = getLocationSuggestions('from');
+  const toOptions = getLocationSuggestions('to');
+
+  return `
+    <div class="toolbar">
+      <button class="btn-link" onclick="goList()">☰ List</button>
+      <h2 style="font-family:Georgia,serif;font-size:1.1rem;margin:0;">
+        ${state.editingId ? 'Edit visit' : 'New check-in'}
+      </h2>
+      <div style="width:60px;"></div>
+    </div>
+
+    <!-- 1. Date -->
+    <div class="section">
+      <div class="section-title">📅 Date</div>
+      <input type="date" data-field="date" value="${escapeAttr(f.date)}" style="font-size:1rem;">
+    </div>
+
+    <!-- 2. Customer -->
+    <div class="section">
+      <div class="section-title">Customer</div>
+      <input type="text" data-field="customer" value="${escapeAttr(f.customer)}" placeholder="e.g. Thai Union" list="customerList" autocomplete="off">
+      <datalist id="customerList">
+        ${customerOptions.map(c => `<option value="${escapeAttr(c)}">`).join('')}
+      </datalist>
+    </div>
+
+    <!-- 3. Location pins -->
+    <div class="section">
+      <div class="section-title">📍 Location Pins · ${(f.pins || []).length} pin${(f.pins || []).length === 1 ? '' : 's'}</div>
+      ${renderPinList()}
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+        <button class="btn-primary" style="flex:1;" onclick="addPin()" ${state.gpsStatus === 'pinning' ? 'disabled' : ''}>
+          ${state.gpsStatus === 'pinning' ? '⏳ Getting location…' : '📍 Drop pin here'}
+        </button>
+        ${(f.pins || []).length > 1 ? `
+          <button class="btn-secondary" onclick="openPinsInMaps()">🗺️ View route</button>` : ''}
+      </div>
+      ${state.gpsStatus.startsWith('error') ? `<div class="danger" style="font-size:0.8rem;margin-top:0.4rem;">${escapeHtml(state.gpsStatus.replace('error:',''))}</div>` : ''}
+    </div>
+
+    <!-- 4. Odometer -->
+    <div class="section">
+      <div class="section-title">⛽ Odometer · Distance ${f.km || '0'} km</div>
+
+      <div class="odo-inline">
+        <div class="odo-inline-side">
+          <div class="odo-inline-label">START</div>
+          ${renderInlineWheels('odometerStart', f.odometerStart)}
+          ${state.odoStartPhoto
+            ? `<div class="odo-inline-photo-wrap">
+                <img src="${state.odoStartPhoto}" class="odo-inline-photo" onclick="zoomImage('${escapeAttr(state.odoStartPhoto)}')" alt="start">
+                <div class="odo-inline-photo-actions">
+                  <button class="btn-tiny" onclick="document.getElementById('odoStartInput').click()">↻</button>
+                  <button class="btn-tiny btn-tiny-danger" onclick="removeOdoStart()">🗑</button>
+                </div>
+              </div>`
+            : `<button class="odo-inline-photo-add" onclick="document.getElementById('odoStartInput').click()">📷 Photo</button>`}
+        </div>
+
+        <div class="odo-inline-side">
+          <div class="odo-inline-label">END</div>
+          ${renderInlineWheels('odometerEnd', f.odometerEnd)}
+          ${state.odoEndPhoto
+            ? `<div class="odo-inline-photo-wrap">
+                <img src="${state.odoEndPhoto}" class="odo-inline-photo" onclick="zoomImage('${escapeAttr(state.odoEndPhoto)}')" alt="end">
+                <div class="odo-inline-photo-actions">
+                  <button class="btn-tiny" onclick="document.getElementById('odoEndInput').click()">↻</button>
+                  <button class="btn-tiny btn-tiny-danger" onclick="removeOdoEnd()">🗑</button>
+                </div>
+              </div>`
+            : `<button class="odo-inline-photo-add" onclick="document.getElementById('odoEndInput').click()">📷 Photo</button>`}
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Expenses -->
+    <div class="section">
+      <div class="section-title">💰 Expenses (THB)</div>
+      <div class="grid-2">
+        <label class="field">
+          <span class="field-label">Allowance</span>
+          <input type="number" inputmode="decimal" data-field="allowance" value="${escapeAttr(f.allowance)}">
+        </label>
+        <label class="field">
+          <span class="field-label">Bills</span>
+          <input type="number" inputmode="decimal" data-field="bills" value="${escapeAttr(f.bills)}">
+        </label>
+        <label class="field">
+          <span class="field-label">Tollway</span>
+          <input type="number" inputmode="decimal" data-field="tollway" value="${escapeAttr(f.tollway)}">
+        </label>
+        <label class="field">
+          <span class="field-label">Taxi</span>
+          <input type="number" inputmode="decimal" data-field="taxi" value="${escapeAttr(f.taxi)}">
+        </label>
+      </div>
+      <div class="total-bar">
+        <div class="total-label">Conveyance (${f.km || 0} × 7.5) + others</div>
+        <div class="total-amt">฿${fmtMoney(total)}</div>
+      </div>
+    </div>
+
+    <!-- 6. Route (From / To) -->
+    <div class="section">
+      <div class="section-title">🛣️ Route</div>
+      <div class="grid-2">
+        <label class="field">
+          <span class="field-label">From</span>
+          <input type="text" data-field="from" value="${escapeAttr(f.from)}" list="fromList" autocomplete="off">
+          <datalist id="fromList">
+            ${fromOptions.map(c => `<option value="${escapeAttr(c)}">`).join('')}
+          </datalist>
+        </label>
+        <label class="field">
+          <span class="field-label">To</span>
+          <input type="text" data-field="to" value="${escapeAttr(f.to)}" list="toList" autocomplete="off">
+          <datalist id="toList">
+            ${toOptions.map(c => `<option value="${escapeAttr(c)}">`).join('')}
+          </datalist>
+        </label>
+      </div>
+    </div>
+
+    <!-- 7. Photo + Notes -->
+    <div class="section">
+      <div class="section-title">📸 Photo & Notes</div>
+      ${state.photoData
+        ? `<div class="photo-preview">
+            <img src="${state.photoData}" alt="">
+            <button class="photo-remove" onclick="removePhoto()">✕</button>
+          </div>`
+        : `<button class="photo-drop" onclick="document.getElementById('photoInput').click()">
+            <div style="font-size:32px;color:#c2410c;">📷</div>
+            <span>Take photo or choose from library</span>
+          </button>`}
+      <textarea rows="3" data-field="notes" placeholder="Notes about this visit" style="margin-top:0.5rem;">${escapeHtml(f.notes)}</textarea>
+    </div>
+
+    <div style="display:flex;gap:0.5rem;margin-top:1.5rem;">
+      <button class="btn-secondary" style="flex:1;" onclick="goList()">☰ List</button>
+      <button class="btn-primary" style="flex:2;" onclick="saveEntry()">
+        ${state.editingId ? 'Save changes' : 'Save check-in'}
+      </button>
+    </div>
+  `;
+}
+
+function renderPinList() {
+  const pins = state.form.pins || [];
+  if (pins.length === 0) {
+    return `<div style="background:#fdfaf3;border:1px dashed #d4c5a9;border-radius:8px;padding:1rem;text-align:center;color:#5a4a3a;font-size:0.9rem;">
+      No pins yet. Tap below to drop a pin at your current location.
+    </div>`;
+  }
+  return `<div class="pin-list">
+    ${pins.map((p, i) => `
+      <div class="pin-row">
+        <div class="pin-num">${i + 1}</div>
+        <div class="pin-body">
+          ${p.label ? `<div class="pin-label">${escapeHtml(p.label)}</div>` : ''}
+          <div class="pin-coords">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</div>
+          <div class="pin-time">${formatTime(p.timestamp)} · ±${Math.round(p.accuracy)}m</div>
+        </div>
+        ${p.photo
+          ? `<img src="${p.photo}" class="pin-photo" onclick="zoomImage('${escapeAttr(p.photo)}')" alt="pin photo">`
+          : `<button class="pin-photo-add" onclick="addPhotoToPin('${p.id}')" title="Add photo">📷</button>`}
+        <a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank" rel="noopener" class="pin-map" title="Open in Maps">🗺️</a>
+        <button class="pin-del" onclick="removePin('${p.id}')" title="Delete">✕</button>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function getCustomerSuggestions() {
+  const seen = new Set();
+  const list = [];
+  // Most-recent-first
+  const sorted = [...state.entries].sort((a, b) =>
+    (b.updatedAt || 0) - (a.updatedAt || 0)
+  );
+  for (const e of sorted) {
+    const c = (e.customer || '').trim();
+    if (c && !seen.has(c.toLowerCase())) {
+      seen.add(c.toLowerCase());
+      list.push(c);
+      if (list.length >= 30) break;
+    }
+  }
+  return list;
+}
+
+function getLocationSuggestions(field) {
+  const seen = new Set();
+  const list = [];
+  // Always include Bangkhunnon as the default suggestion
+  list.push('Bangkhunnon');
+  seen.add('bangkhunnon');
+  const sorted = [...state.entries].sort((a, b) =>
+    (b.updatedAt || 0) - (a.updatedAt || 0)
+  );
+  for (const e of sorted) {
+    const v = (e[field] || '').trim();
+    if (v && !seen.has(v.toLowerCase())) {
+      seen.add(v.toLowerCase());
+      list.push(v);
+      if (list.length >= 30) break;
+    }
+  }
+  return list;
+}
+
+//=============================================================
+// Pin management (multiple GPS pins per visit)
+//=============================================================
+function addPin() {
+  if (!navigator.geolocation) {
+    state.gpsStatus = 'error:GPS not supported';
+    render();
+    return;
+  }
+  state.gpsStatus = 'pinning';
+  render();
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const pin = {
+        id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        timestamp: pos.timestamp,
+        photo: null,
+        label: '',
+      };
+      state.form.pins = state.form.pins || [];
+      state.form.pins.push(pin);
+      state.gpsStatus = 'idle';
+      render();
+    },
+    (err) => {
+      state.gpsStatus = 'error:' + err.message;
+      render();
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+function removePin(pinId) {
+  state.form.pins = (state.form.pins || []).filter(p => p.id !== pinId);
+  render();
+}
+
+function addPhotoToPin(pinId) {
+  // Use a temporary file input
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.onchange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 800;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+        const pin = (state.form.pins || []).find(p => p.id === pinId);
+        if (pin) {
+          pin.photo = dataUrl;
+          render();
+        }
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+function openPinsInMaps() {
+  const pins = state.form.pins || [];
+  if (pins.length < 2) return;
+  // Build a Google Maps directions URL with multiple waypoints
+  // Format: https://www.google.com/maps/dir/lat1,lng1/lat2,lng2/lat3,lng3
+  const url = 'https://www.google.com/maps/dir/' +
+    pins.map(p => `${p.lat},${p.lng}`).join('/');
+  window.open(url, '_blank', 'noopener');
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderInlineWheels(target, value) {
+  const digits = numberToDigits(value, 4);
+  // Build 3 cycles of digits 0-9 so the wheel feels infinite when dragging
+  // Center of viewport (y=48..96) shows digit `d` of the MIDDLE cycle.
+  // Middle cycle digit d is at index (10 + d). Cell at index k starts at y = k*48.
+  // To put cell (10+d) at y=48: translateY(48 - (10+d)*48) = -432 - 48*d
+  const cycleCount = 3;
+  const middle = 10; // start index of middle cycle
+  return `
+    <div class="odo-wheel-row" data-target="${target}">
+      ${digits.map((d, i) => {
+        const initY = -432 - 48 * d; // 48 - (10+d)*48
+        return `
+        ${i === 1 ? '<div class="odo-wheel-comma">,</div>' : ''}
+        <div class="odo-wheel" data-target="${target}" data-pos="${i}" data-digit="${d}">
+          <div class="odo-wheel-up" data-dir="up">▲</div>
+          <div class="odo-wheel-strip">
+            <div class="odo-wheel-track" style="transform:translateY(${initY}px)">
+              ${Array.from({length: cycleCount * 10}).map((_, k) => {
+                const cellDigit = k % 10;
+                const isCenter = k === middle + d;
+                return `<div class="odo-wheel-cell ${isCenter ? 'selected' : ''}">${cellDigit}</div>`;
+              }).join('')}
+            </div>
+          </div>
+          <div class="odo-wheel-down" data-dir="down">▼</div>
+        </div>
+      `}).join('')}
+    </div>
+    <div class="odo-wheel-value">${escapeHtml(formatOdometerValue(value))} <span style="font-size:0.7rem;color:#8a7a6a;">km</span></div>
+  `;
+}
+
+function renderOdoMode() {
+  const f = state.form;
+  const startDigits = numberToDigits(f.odometerStart, 4);
+  const endDigits = numberToDigits(f.odometerEnd, 4);
+
+  return `
+    <div class="odo-fullscreen">
+      <div class="odo-side-by-side">
+        <!-- START side -->
+        <div class="odo-side">
+          <div class="odo-side-header">START</div>
+          <div class="odo-side-photo" onclick="${state.odoStartPhoto ? `zoomImage('${escapeAttr(state.odoStartPhoto)}')` : `document.getElementById('odoStartInput').click()`}">
+            ${state.odoStartPhoto
+              ? `<img src="${state.odoStartPhoto}" alt="start">`
+              : `<div class="odo-side-photo-add">📷<br><span style="font-size:0.75rem;">Take photo</span></div>`}
+            ${state.odoStartPhoto ? `<button class="odo-side-photo-retake" onclick="event.stopPropagation();document.getElementById('odoStartInput').click()">↻</button>` : ''}
+          </div>
+          <div class="odo-wheel-row" data-target="odometerStart">
+            ${startDigits.map((d, i) => `
+              <div class="odo-wheel" data-target="odometerStart" data-pos="${i}" data-digit="${d}">
+                <div class="odo-wheel-up" data-dir="up">▲</div>
+                <div class="odo-wheel-strip">
+                  <div class="odo-wheel-track" style="transform:translateY(${48 - d * 48}px)">
+                    ${[0,1,2,3,4,5,6,7,8,9].map(n => `<div class="odo-wheel-cell ${n === d ? 'selected' : ''}">${n}</div>`).join('')}
+                  </div>
+                </div>
+                <div class="odo-wheel-down" data-dir="down">▼</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="odo-side-value">Start: <strong>${escapeHtml(f.odometerStart || '0000')}</strong> km</div>
+        </div>
+
+        <!-- END side -->
+        <div class="odo-side">
+          <div class="odo-side-header">END</div>
+          <div class="odo-side-photo" onclick="${state.odoEndPhoto ? `zoomImage('${escapeAttr(state.odoEndPhoto)}')` : `document.getElementById('odoEndInput').click()`}">
+            ${state.odoEndPhoto
+              ? `<img src="${state.odoEndPhoto}" alt="end">`
+              : `<div class="odo-side-photo-add">📷<br><span style="font-size:0.75rem;">Take photo</span></div>`}
+            ${state.odoEndPhoto ? `<button class="odo-side-photo-retake" onclick="event.stopPropagation();document.getElementById('odoEndInput').click()">↻</button>` : ''}
+          </div>
+          <div class="odo-wheel-row" data-target="odometerEnd">
+            ${endDigits.map((d, i) => `
+              <div class="odo-wheel" data-target="odometerEnd" data-pos="${i}" data-digit="${d}">
+                <div class="odo-wheel-up" data-dir="up">▲</div>
+                <div class="odo-wheel-strip">
+                  <div class="odo-wheel-track" style="transform:translateY(${48 - d * 48}px)">
+                    ${[0,1,2,3,4,5,6,7,8,9].map(n => `<div class="odo-wheel-cell ${n === d ? 'selected' : ''}">${n}</div>`).join('')}
+                  </div>
+                </div>
+                <div class="odo-wheel-down" data-dir="down">▼</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="odo-side-value">End: <strong>${escapeHtml(f.odometerEnd || '0000')}</strong> km</div>
+        </div>
+      </div>
+
+      <div class="odo-bottom">
+        <div class="odo-distance-bar">
+          Distance: <strong>${f.km || '0'}</strong> km
+        </div>
+        <button class="btn-primary odo-done" onclick="exitOdoMode()">Done</button>
+      </div>
+    </div>
+  `;
+}
+
+function bindOdoMode() {
+  // Bind tap-arrow buttons
+  document.querySelectorAll('.odo-wheel-up, .odo-wheel-down').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wheel = btn.closest('.odo-wheel');
+      const target = wheel.dataset.target;
+      const pos = parseInt(wheel.dataset.pos, 10);
+      const dir = btn.dataset.dir === 'up' ? -1 : 1;
+      bumpDigit(target, pos, dir);
+    });
+  });
+
+  // Bind swipe/drag/wheel-scroll on each wheel strip
+  document.querySelectorAll('.odo-wheel').forEach(wheel => {
+    setupWheelGestures(wheel);
+  });
+}
+
+function numberToDigits(value, length) {
+  const n = parseInt(value, 10);
+  const safe = isNaN(n) ? 0 : Math.max(0, Math.min(Math.pow(10, length) - 1, n));
+  const s = safe.toString().padStart(length, '0');
+  return s.split('').map(c => parseInt(c, 10));
+}
+
+function digitsToNumber(digits) {
+  return parseInt(digits.join(''), 10);
+}
+
+function setDigit(target, pos, digit) {
+  const current = numberToDigits(state.form[target], 4);
+  current[pos] = ((digit % 10) + 10) % 10;
+  state.form[target] = String(digitsToNumber(current));
+  recomputeKm();
+}
+
+function bumpDigit(target, pos, delta) {
+  const current = numberToDigits(state.form[target], 4);
+  current[pos] = ((current[pos] + delta) % 10 + 10) % 10;
+  state.form[target] = String(digitsToNumber(current));
+  recomputeKm();
+  // Re-render only the affected wheel column to feel snappy (optional optimization).
+  // For simplicity, full re-render:
+  render();
+}
+
+function recomputeKm() {
+  const s = parseInt(state.form.odometerStart, 10);
+  const e = parseInt(state.form.odometerEnd, 10);
+  if (!isNaN(s) && !isNaN(e) && e >= s) {
+    state.form.km = String(e - s);
+  }
+}
+
+function setupWheelGestures(wheelEl) {
+  const target = wheelEl.dataset.target;
+  const pos = parseInt(wheelEl.dataset.pos, 10);
+  const strip = wheelEl.querySelector('.odo-wheel-strip');
+  const track = wheelEl.querySelector('.odo-wheel-track');
+  if (!strip || !track) return;
+
+  let startY = 0;
+  let lastY = 0;
+  let startDigit = parseInt(wheelEl.dataset.digit, 10);
+  let dragging = false;
+  const cellHeight = 48;
+  // initY for digit d: -432 - 48*d (positions middle-cycle digit at center)
+  const initYFor = (d) => -432 - 48 * d;
+
+  function onStart(clientY) {
+    dragging = true;
+    startY = clientY;
+    lastY = clientY;
+    startDigit = numberToDigits(state.form[target], 4)[pos];
+    track.style.transition = 'none';
+  }
+  function onMove(clientY) {
+    if (!dragging) return;
+    lastY = clientY;
+    const dy = clientY - startY;
+    track.style.transform = `translateY(${initYFor(startDigit) + dy}px)`;
+  }
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    const dy = lastY - startY;
+    // Drag DOWN (dy > 0) = previous digit comes into center = digit DECREASES.
+    // Cyclic via mod-10. Because we have 3 cycles in DOM, the user can drag from 9 to 0
+    // or 0 to 9 smoothly without seeing a hard edge.
+    const delta = -Math.round(dy / cellHeight);
+    const newDigit = ((startDigit + delta) % 10 + 10) % 10;
+    track.style.transition = '';
+    setDigit(target, pos, newDigit);
+    updateWheelDOM(wheelEl, newDigit);
+    updateDistanceDisplay();
+  }
+
+  strip.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    onStart(e.touches[0].clientY);
+  }, { passive: false });
+  strip.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    onMove(e.touches[0].clientY);
+  }, { passive: false });
+  strip.addEventListener('touchend', () => onEnd());
+  strip.addEventListener('touchcancel', () => onEnd());
+
+  strip.addEventListener('mousedown', (e) => {
+    onStart(e.clientY);
+    const moveHandler = (ev) => onMove(ev.clientY);
+    const upHandler = () => {
+      onEnd();
+      window.removeEventListener('mousemove', moveHandler);
+      window.removeEventListener('mouseup', upHandler);
+    };
+    window.addEventListener('mousemove', moveHandler);
+    window.addEventListener('mouseup', upHandler);
+    e.preventDefault();
+  });
+
+  strip.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 1 : -1;
+    bumpDigitNoRender(target, pos, delta);
+    const newDigit = numberToDigits(state.form[target], 4)[pos];
+    updateWheelDOM(wheelEl, newDigit);
+    updateDistanceDisplay();
+  }, { passive: false });
+}
+
+function bumpDigitNoRender(target, pos, delta) {
+  const current = numberToDigits(state.form[target], 4);
+  current[pos] = ((current[pos] + delta) % 10 + 10) % 10;
+  state.form[target] = String(digitsToNumber(current));
+  recomputeKm();
+}
+
+function updateWheelDOM(wheelEl, newDigit) {
+  wheelEl.dataset.digit = String(newDigit);
+  const track = wheelEl.querySelector('.odo-wheel-track');
+  if (track) {
+    // 3-cycle layout: snap back to digit's position in the middle cycle
+    track.style.transform = `translateY(${-432 - 48 * newDigit}px)`;
+  }
+  // Highlight the correct cell in the middle cycle (index 10 + newDigit out of 30)
+  const cells = wheelEl.querySelectorAll('.odo-wheel-cell');
+  const middleIdx = 10 + newDigit;
+  cells.forEach((cell, i) => {
+    cell.classList.toggle('selected', i === middleIdx);
+  });
+  // Update value display
+  const target = wheelEl.dataset.target;
+  const wheelRow = wheelEl.parentElement;
+  if (wheelRow) {
+    const valueEl = wheelRow.parentElement.querySelector('.odo-wheel-value');
+    if (valueEl) {
+      const formatted = formatOdometerValue(state.form[target]);
+      valueEl.innerHTML = `${escapeHtml(formatted)} <span style="font-size:0.7rem;color:#8a7a6a;">km</span>`;
+    }
+  }
+}
+
+function updateDistanceDisplay() {
+  const sections = document.querySelectorAll('.section-title');
+  sections.forEach(s => {
+    if (s.textContent.includes('Odometer')) {
+      s.textContent = `⛽ Odometer · Distance ${state.form.km || '0'} km`;
+    }
+  });
+  updateLiveTotal();
+}
+
+function formatOdometerValue(value) {
+  const n = parseInt(value, 10);
+  if (isNaN(n)) return '0,000';
+  const padded = String(n).padStart(4, '0');
+  return padded.slice(0, -3) + ',' + padded.slice(-3);
+}
+
+function setOdoField(field) {
+  state.odoActiveField = field;
+  render();
+}
+
+function enterOdoMode(field) {
+  state.odoMode = true;
+  state.odoActiveField = field || (state.form.odometerStart ? 'odometerEnd' : 'odometerStart');
+  render();
+}
+
+function exitOdoMode() {
+  state.odoMode = false;
+  state.odoActiveField = null;
+  render();
+}
+
+function renderDetail() {
+  const e = state.active;
+  if (!e) return '';
+  const conveyance = (parseFloat(e.km) || 0) * 7.5;
+
+  return `
+    <div class="toolbar">
+      <button class="btn-link" onclick="goList()">✕ Back</button>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn-secondary" onclick="editActive()">✎ Edit</button>
+        <button class="btn-secondary" style="color:#a02a2a;border-color:#e8c9c9;" onclick="deleteEntry('${e.id}')">🗑</button>
+      </div>
+    </div>
+
+    ${e.photo ? `<img class="detail-photo" src="${e.photo}" alt="">` : ''}
+
+    <h1 class="detail-title">${escapeHtml(e.customer)}</h1>
+    <div class="detail-date">📅 ${escapeHtml(formatDateLong(e.date))}</div>
+
+    <div class="section">
+      <div class="section-title">Total</div>
+      <div class="big-amount">฿${fmtMoney(calcRowTotal(e))}</div>
+      <div style="font-size:0.85rem;color:#5a4a3a;margin-top:0.25rem;">
+        Allowance ฿${e.allowance || 0} ·
+        Conveyance ฿${conveyance.toFixed(2)} (${e.km || 0}km) ·
+        Tollway ฿${e.tollway || 0} ·
+        Taxi ฿${e.taxi || 0} ·
+        Bills ฿${e.bills || 0}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Route</div>
+      <div class="kv"><span class="kv-label">From</span><span>${escapeHtml(e.from || '—')}</span></div>
+      <div class="kv"><span class="kv-label">To</span><span>${escapeHtml(e.to || '—')}</span></div>
+      <div class="kv"><span class="kv-label">Distance</span><span>${e.km ? escapeHtml(e.km) + ' km' : '—'}</span></div>
+      ${(e.odometerStart || e.odometerEnd) ? `<div class="kv"><span class="kv-label">Odometer</span><span>${escapeHtml(e.odometerStart || '?')} → ${escapeHtml(e.odometerEnd || '?')}</span></div>` : ''}
+      ${(e.odoStartPhoto || e.odoEndPhoto || e.odoPhoto) ? `
+        <div class="odo-pair" style="margin-top:0.75rem;">
+          ${(e.odoStartPhoto || e.odoPhoto) ? `
+            <div class="odo-slot" style="cursor:zoom-in;" onclick="zoomImage('${escapeAttr(e.odoStartPhoto || e.odoPhoto)}')">
+              <div class="odo-slot-label">START</div>
+              <img src="${e.odoStartPhoto || e.odoPhoto}" alt="start" class="odo-slot-img">
+              <div class="odo-slot-value">${escapeHtml(e.odometerStart || '—')}</div>
+            </div>` : '<div></div>'}
+          ${e.odoEndPhoto ? `
+            <div class="odo-slot" style="cursor:zoom-in;" onclick="zoomImage('${escapeAttr(e.odoEndPhoto)}')">
+              <div class="odo-slot-label">END</div>
+              <img src="${e.odoEndPhoto}" alt="end" class="odo-slot-img">
+              <div class="odo-slot-value">${escapeHtml(e.odometerEnd || '—')}</div>
+            </div>` : '<div></div>'}
+        </div>` : ''}
+    </div>
+
+    ${(e.pins && e.pins.length > 0) ? `
+      <div class="section">
+        <div class="section-title">📍 Location Pins · ${e.pins.length}</div>
+        <div class="pin-list">
+          ${e.pins.map((p, i) => `
+            <div class="pin-row">
+              <div class="pin-num">${i + 1}</div>
+              <div class="pin-body">
+                <div class="pin-coords">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</div>
+                <div class="pin-time">${formatTime(p.timestamp)} · ±${Math.round(p.accuracy)}m</div>
+              </div>
+              ${p.photo
+                ? `<img src="${p.photo}" class="pin-photo" onclick="zoomImage('${escapeAttr(p.photo)}')" alt="">`
+                : ''}
+              <a href="https://maps.google.com/?q=${p.lat},${p.lng}" target="_blank" rel="noopener" class="pin-map">🗺️</a>
+            </div>
+          `).join('')}
+        </div>
+        ${e.pins.length > 1 ? `
+          <a href="https://www.google.com/maps/dir/${e.pins.map(p => p.lat + ',' + p.lng).join('/')}" target="_blank" rel="noopener" class="maps-link">View full route in Google Maps →</a>` : ''}
+      </div>` : (e.coords ? `
+      <div class="section">
+        <div class="section-title">GPS</div>
+        <div class="kv"><span class="kv-label">Coordinates</span><span>${e.coords.lat.toFixed(5)}, ${e.coords.lng.toFixed(5)}</span></div>
+        <div class="kv"><span class="kv-label">Accuracy</span><span>±${Math.round(e.coords.accuracy)} m</span></div>
+        ${e.coords.source ? `<div class="kv"><span class="kv-label">Source</span><span>${e.coords.source === 'photo' ? 'From photo' : 'Live GPS'}</span></div>` : ''}
+        <a class="maps-link" href="https://maps.google.com/?q=${e.coords.lat},${e.coords.lng}" target="_blank" rel="noopener">Open in Google Maps →</a>
+      </div>` : '')}
+
+    ${e.notes ? `
+      <div class="section">
+        <div class="section-title">Notes</div>
+        <div style="white-space:pre-wrap;font-size:0.9rem;color:#3d2817;">${escapeHtml(e.notes)}</div>
+      </div>` : ''}
+  `;
+}
+
+async function renderExportModal() {
+  const existing = document.getElementById('exportModal');
+  if (existing) existing.remove();
+
+  const groups = groupByMonth(state.entries);
+  const labels = Object.keys(groups).reverse();
+  const est = await getStorageEstimate();
+
+  const div = document.createElement('div');
+  div.id = 'exportModal';
+  div.className = 'modal-bg';
+  div.onclick = () => { state.exportOpen = false; render(); };
+  div.innerHTML = `
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Export Month</h2>
+        <button class="icon-btn" onclick="closeExport()">✕</button>
+      </div>
+      ${est ? `
+        <div style="font-size:0.75rem;color:#8a7a6a;background:#fdfaf3;border:1px solid #e8dfcd;border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.75rem;">
+          📦 Storage: <strong>${est.usageMB} MB</strong> used of ~${est.quotaMB} MB available
+          (${state.entries.length} entries)
+        </div>` : ''}
+      <p style="font-size:0.85rem;color:#5a4a3a;margin-top:0;">
+        CSV opens in Excel and matches your expense report columns.
+        The HTML version bundles all photos + GPS for sharing or printing.
+      </p>
+      ${labels.length === 0 ? '<p>No data yet.</p>' : labels.map(label => {
+        const g = groups[label];
+        return `
+          <div class="month-export">
+            <div class="month-export-title">
+              ${escapeHtml(label)}
+              <span style="color:#8a7a6a;font-weight:400;font-size:0.85rem;">(${g.items.length} entries)</span>
+            </div>
+            <div class="month-export-actions">
+              <button class="btn-secondary" onclick="doExportCSV('${g.key}')">CSV (expense form)</button>
+              <button class="btn-secondary" onclick="doExportPhotos('${g.key}')">Photos + GPS (HTML)</button>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
+  document.body.appendChild(div);
+}
+
+//=============================================================
+// Event bindings
+//=============================================================
+function bindGlobal() {
+  const fab = document.getElementById('fab');
+  fab.onclick = startAdd;
+
+  const exportBtn = document.getElementById('exportBtn');
+  exportBtn.onclick = () => { state.exportOpen = true; render(); };
+
+  const photoInput = document.getElementById('photoInput');
+  photoInput.onchange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handlePhotoFile(file, 'photo');
+    photoInput.value = '';
+  };
+
+  const odoStartInput = document.getElementById('odoStartInput');
+  odoStartInput.onchange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handlePhotoFile(file, 'odoStart');
+    odoStartInput.value = '';
+  };
+
+  const odoEndInput = document.getElementById('odoEndInput');
+  odoEndInput.onchange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handlePhotoFile(file, 'odoEnd');
+    odoEndInput.value = '';
+  };
+}
+
+function bindForm() {
+  document.querySelectorAll('[data-field]').forEach(el => {
+    // Skip wheel containers — their data-field is handled by wheel handlers
+    if (el.classList.contains('odo-wheel') || el.classList.contains('odo-wheel-row')) return;
+    el.addEventListener('input', () => {
+      state.form[el.dataset.field] = el.value;
+      // Auto-compute km from odometer
+      if (el.dataset.autoKm !== undefined) {
+        const s = parseFloat(state.form.odometerStart);
+        const e = parseFloat(state.form.odometerEnd);
+        if (!isNaN(s) && !isNaN(e) && e >= s) {
+          state.form.km = String(Math.round((e - s) * 100) / 100);
+          const kmInput = document.querySelector('[data-field="km"]');
+          if (kmInput) kmInput.value = state.form.km;
+        }
+      }
+      // Update live total
+      updateLiveTotal();
+    });
+  });
+
+  // Bind wheel arrow buttons and gestures
+  document.querySelectorAll('.odo-wheel-up, .odo-wheel-down').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wheel = btn.closest('.odo-wheel');
+      const target = wheel.dataset.target;
+      const pos = parseInt(wheel.dataset.pos, 10);
+      const dir = btn.dataset.dir === 'up' ? 1 : -1;
+      bumpDigitNoRender(target, pos, dir);
+      const newDigit = numberToDigits(state.form[target], 4)[pos];
+      updateWheelDOM(wheel, newDigit);
+      updateDistanceDisplay();
+    });
+  });
+  document.querySelectorAll('.odo-wheel').forEach(wheel => {
+    setupWheelGestures(wheel);
+  });
+}
+
+function updateLiveTotal() {
+  const f = state.form;
+  const conveyance = (parseFloat(f.km) || 0) * 7.5;
+  const total = (parseFloat(f.allowance) || 0) + (parseFloat(f.bills) || 0) +
+    conveyance + (parseFloat(f.tollway) || 0) + (parseFloat(f.taxi) || 0);
+  const totalEl = document.querySelector('.total-amt');
+  const labelEl = document.querySelector('.total-label');
+  if (totalEl) totalEl.textContent = '฿' + fmtMoney(total);
+  if (labelEl) labelEl.textContent = `Conveyance (${f.km || 0} × 7.5) + others`;
+}
+
+//=============================================================
+// Action wrappers exposed to inline onclick
+//=============================================================
+function openDetail(id) {
+  const e = state.entries.find(x => x.id === id);
+  if (e) { state.active = e; state.view = 'detail'; render(); }
+}
+function goList() { state.view = 'list'; render(); }
+function cancelAdd() { state.view = 'list'; render(); }
+function editActive() { if (state.active) startEdit(state.active); }
+function removePhoto() { state.photoData = null; render(); }
+function removeOdoStart() { state.odoStartPhoto = null; render(); }
+function removeOdoEnd() { state.odoEndPhoto = null; render(); }
+
+function zoomImage(src) {
+  const existing = document.getElementById('zoomOverlay');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = 'zoomOverlay';
+  div.className = 'zoom-bg';
+  div.onclick = () => div.remove();
+  div.innerHTML = `<button class="zoom-close" onclick="this.parentElement.remove()">✕</button><img src="${src}" alt="">`;
+  document.body.appendChild(div);
+}
+function closeExport() { state.exportOpen = false; render(); }
+function doExportCSV(monthKey) {
+  const g = groupByMonth(state.entries);
+  for (const k of Object.keys(g)) {
+    if (g[k].key === monthKey) { exportCSV(monthKey, g[k].items); return; }
+  }
+}
+function doExportPhotos(monthKey) {
+  const g = groupByMonth(state.entries);
+  for (const k of Object.keys(g)) {
+    if (g[k].key === monthKey) { exportPhotos(monthKey, g[k].items); return; }
+  }
+}
+
+// Boot
+(async function init() {
+  try {
+    await migrateFromLocalStorage();
+    state.entries = await loadEntries();
+  } catch (e) {
+    console.error('Init failed:', e);
+    alert('Could not open storage: ' + e.message);
+  } finally {
+    state.loading = false;
+    // Always start in New check-in mode (user can go back to list via top-left)
+    startAdd();
+  }
+})();
+</script>
+</body>
+</html>
